@@ -9,6 +9,7 @@ import org.apache.http.concurrent.FutureCallback;
 import org.apache.http.impl.nio.client.DefaultHttpAsyncClient;
 import org.apache.http.impl.nio.conn.PoolingClientAsyncConnectionManager;
 import org.apache.http.impl.nio.reactor.DefaultConnectingIOReactor;
+import org.apache.http.impl.nio.reactor.IOReactorConfig;
 import org.apache.http.nio.client.HttpAsyncClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,12 +25,14 @@ public class HttpComponentsClient {
 
 	public static void main(String[] args) throws InterruptedException, IOException {
 
-		int count = 4000;
+		int count = 10000;
 
-		DefaultConnectingIOReactor ioreactor = new DefaultConnectingIOReactor();
+		IOReactorConfig ioconfig = new IOReactorConfig();
+		ioconfig.setIoThreadCount(10);
+		DefaultConnectingIOReactor ioreactor = new DefaultConnectingIOReactor(ioconfig );
 		PoolingClientAsyncConnectionManager connectionManager = new PoolingClientAsyncConnectionManager(ioreactor);
-		connectionManager.setDefaultMaxPerRoute(count); // default is 2 connections per host
-		connectionManager.setMaxTotal(count);	// default is 20 total connections
+		connectionManager.setDefaultMaxPerRoute(2000); // default is 2 connections per host
+		connectionManager.setMaxTotal(2000);	// default is 20 total connections
 		HttpAsyncClient httpclient = new DefaultHttpAsyncClient(connectionManager);
 
 		StopWatch watch = new StopWatch();
