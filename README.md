@@ -6,7 +6,7 @@ You need to have [node and npm installed](https://github.com/joyent/node/wiki/In
 
 To start the node server:
 ````
-cd client
+cd node
 ./start.sh
 ````
 
