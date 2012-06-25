@@ -28,8 +28,8 @@ public class HttpComponentsClient {
 
 		DefaultConnectingIOReactor ioreactor = new DefaultConnectingIOReactor();
 		PoolingClientAsyncConnectionManager connectionManager = new PoolingClientAsyncConnectionManager(ioreactor);
-		connectionManager.setDefaultMaxPerRoute(count);
-		connectionManager.setMaxTotal(count);
+		connectionManager.setDefaultMaxPerRoute(count); // default is 2 connections per host
+		connectionManager.setMaxTotal(count);	// default is 20 total connections
 		HttpAsyncClient httpclient = new DefaultHttpAsyncClient(connectionManager);
 
 		StopWatch watch = new StopWatch();
