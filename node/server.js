@@ -1,5 +1,6 @@
 
 var http = require('http');
+var port = process.argv[2];
 
 http.createServer(function (request, response) {
   if(request.url = '/products') {
@@ -9,9 +10,9 @@ http.createServer(function (request, response) {
       response.end(JSON.stringify(getJsonResponse()));
     }, 1000)
   }
-}).listen(1337);
+}).listen(port);
 
-console.log('Server running at http://127.0.0.1:1337/');
+console.log('Server running at http://127.0.0.1:' + port);
 
 function getJsonResponse() {
   return {

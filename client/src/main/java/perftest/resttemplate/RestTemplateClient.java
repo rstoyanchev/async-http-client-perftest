@@ -18,15 +18,15 @@ public class RestTemplateClient {
 
 		final RestTemplate restTemplate = new RestTemplate();
 
-//		System.in.read();
 		StopWatch watch = new StopWatch();
 		watch.start();
 
-		int count = 100;
+		final int count = 10000;
 
 		ThreadPoolTaskExecutor taskExecutor = new ThreadPoolTaskExecutor();
-		taskExecutor.setCorePoolSize(count);
-		taskExecutor.setMaxPoolSize(count);
+		taskExecutor.setCorePoolSize(2000);
+		taskExecutor.setMaxPoolSize(2000);
+		taskExecutor.setQueueCapacity(10000);
 		taskExecutor.afterPropertiesSet();
 
 		final CountDownLatch latch = new CountDownLatch(count);
@@ -36,9 +36,20 @@ public class RestTemplateClient {
 			taskExecutor.submit(new Runnable() {
 				@Override
 				public void run() {
-					Product product = restTemplate.getForObject("http://127.0.0.1:1337/products", Product.class);
-					logger.debug("[{}] {}", index, product.toString());
-					latch.countDown();
+					Integer port = 1330 + index / 1000;
+					StopWatch w = new StopWatch();
+					w.start();
+					try {
+						restTemplate.getForObject("http://127.0.0.1:" + port + "/products", Product.class);
+						w.stop();
+						logger.debug("[{}] {} millis", index, w.getTotalTimeMillis());
+					}
+					catch (Throwable t) {
+						logger.error("index: {}, port: {}, message: {} ", new Object[] {index, port, t.getMessage()});
+					}
+					finally {
+						latch.countDown();
+					}
 				}
 			});
 		}
@@ -48,7 +59,7 @@ public class RestTemplateClient {
 		watch.stop();
 		logger.debug("Time: " + watch.getTotalTimeMillis());
 
-//		System.in.read();
+		System.in.read();
 		System.exit(0);
 	}
 

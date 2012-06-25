@@ -7,9 +7,9 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.concurrent.FutureCallback;
 import org.apache.http.impl.nio.client.DefaultHttpAsyncClient;
-import org.apache.http.impl.nio.reactor.IOReactorConfig;
+import org.apache.http.impl.nio.conn.PoolingClientAsyncConnectionManager;
+import org.apache.http.impl.nio.reactor.DefaultConnectingIOReactor;
 import org.apache.http.nio.client.HttpAsyncClient;
-import org.apache.http.params.CoreConnectionPNames;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpInputMessage;
@@ -24,25 +24,23 @@ public class HttpComponentsClient {
 
 	public static void main(String[] args) throws InterruptedException, IOException {
 
-		IOReactorConfig ioReactorConfig = new IOReactorConfig();
-		ioReactorConfig.setIoThreadCount(20);
-		HttpAsyncClient httpclient = new DefaultHttpAsyncClient(ioReactorConfig);
+		int count = 4000;
 
-//		httpclient.getParams()
-//			.setIntParameter(CoreConnectionPNames.SO_TIMEOUT, 9000)
-//			.setIntParameter(CoreConnectionPNames.CONNECTION_TIMEOUT, 3000)
-//			.setIntParameter(CoreConnectionPNames.SOCKET_BUFFER_SIZE, 4000 * 1024)
-//			.setBooleanParameter(CoreConnectionPNames.TCP_NODELAY, true);
+		DefaultConnectingIOReactor ioreactor = new DefaultConnectingIOReactor();
+		PoolingClientAsyncConnectionManager connectionManager = new PoolingClientAsyncConnectionManager(ioreactor);
+		connectionManager.setDefaultMaxPerRoute(count);
+		connectionManager.setMaxTotal(count);
+		HttpAsyncClient httpclient = new DefaultHttpAsyncClient(connectionManager);
 
-//		System.in.read();
 		StopWatch watch = new StopWatch();
 		watch.start();
 
 		httpclient.start();
 		try {
-			final HttpGet[] requests = new HttpGet[20];
+			final HttpGet[] requests = new HttpGet[count];
 			for (int i = 0; i < requests.length; i++) {
-				requests[i] = new HttpGet("http://127.0.0.1:1337/products");
+				int port = 1330 + i / 1000;
+				requests[i] = new HttpGet("http://127.0.0.1:" + port + "/products");
 			}
 
 			final CountDownLatch latch = new CountDownLatch(requests.length);
@@ -55,25 +53,24 @@ public class HttpComponentsClient {
 
 					public void completed(final HttpResponse response) {
 						HttpInputMessage inputMessage = new HttpComponentsClientHttpResponse(response);
-						Product product;
 						try {
-							product = (Product) converter.read(Product.class, inputMessage);
-							logger.debug("[{}] {}", index, product.toString());
+							converter.read(Product.class, inputMessage);
+							logger.debug("[{}]", index);
 						}
-						catch (IOException ex) {
-							logger.debug(requests[index].getRequestLine() + "->" + ex);
+						catch (Throwable t) {
+							logger.error("exception: {} -> {}", requests[index].getRequestLine(), t.getMessage());
 						}
-						latch.countDown();
+						finally {
+							latch.countDown();
+						}
 					}
 
 					public void failed(final Exception ex) {
-						logger.debug(requests[index].getRequestLine() + "->" + ex);
-						latch.countDown();
+						logger.debug("failed: {}", index);
 					}
 
 					public void cancelled() {
 						logger.debug(requests[index].getRequestLine() + " cancelled");
-						latch.countDown();
 					}
 
 				});
@@ -87,7 +84,7 @@ public class HttpComponentsClient {
 		watch.stop();
 		logger.debug("Time: " + watch.getTotalTimeMillis());
 
-//		System.in.read();
+		System.in.read();
 		System.exit(0);
 	}
 
